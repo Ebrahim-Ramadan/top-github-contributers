@@ -187,6 +187,7 @@ const TopGithubContributors = () => {
         setIsSearching(false);
         return;
       }
+      setError(searchOneCountryResults)
     }
 
     setResults({ notFound: true, name: RequiredName });
@@ -203,7 +204,7 @@ const TopGithubContributors = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col justify-center items-center">
+    <div className="h-screen w-full flex flex-col justify-center items-center">
       <div className="max-w-md mx-auto p-4 rounded-md shadow-md">
         <h2 className="text-2xl font-semibold mb-4">
           Are You on Top Github Contributors?
