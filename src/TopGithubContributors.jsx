@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState,  useCallback } from 'react';
 import { CountriesList } from '../public/CountriesList';
 
 
@@ -171,7 +171,7 @@ const TopGithubContributors = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState(null);
 
-  const findUser = useCallback(async (RequiredName) => {
+  const findUser = async (RequiredName) => {
     setIsSearching(true);
     setResults(null);
     setSearching([]);
@@ -191,7 +191,7 @@ const TopGithubContributors = () => {
 
     setResults({ notFound: true, name: RequiredName });
     setIsSearching(false);
-  }, []);
+  };
 
  
 

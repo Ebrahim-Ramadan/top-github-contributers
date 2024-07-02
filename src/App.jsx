@@ -1,9 +1,13 @@
+import { Header } from "./globals/Header"
 import TopGithubContributors from "./TopGithubContributors"
 
 function App() {
 
   return (
-    <TopGithubContributors/>
+    <>
+    <Header/>
+      <TopGithubContributors />
+    </>
   )
 }
 
