@@ -1,4 +1,4 @@
-import React, { useState,  useCallback } from 'react';
+import React, { useState,  useCallback, useEffect } from 'react';
 import { CountriesList } from '../public/CountriesList';
 
 
@@ -14,9 +14,8 @@ const SearchOneCountry = async (country, RequiredName) => {
   try {
     const response = await fetch(`https://raw.githubusercontent.com/gayanvoice/top-github-users/main/cache/${country}.json`);
     const data = await response.json();
-    console.log('data', data);
-    const result = data.find(user => user.login === RequiredName) || null;
-    console.log('result', result);
+    const index = data.findIndex(user => user.login === RequiredName);
+    const result = index !== -1 ? { ...data[index], index } : null;
     cache.set(cacheKey, result);
     return result;
   } catch (error) {
@@ -37,8 +36,8 @@ const SearchForm = ({ name, setName, handleSubmit, isSearching }) => (
         id="name"
         value={name}
         onChange={(e) => setName(e.target.value)}
-        placeholder="username"
-        className="bg-white/20 p-2 block w-full border-gray-100 rounded-md border-2 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50 focus:outline-none border-gray-900 border focus:border-none"
+        placeholder="@username"
+        className="bg-white/20 p-2 block w-full border-gray-100 rounded-xl border-2 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50 focus:outline-none border-gray-900 border focus:border-none"
         autoFocus
       />
     </div>
@@ -46,31 +45,51 @@ const SearchForm = ({ name, setName, handleSubmit, isSearching }) => (
       <button
         type="submit"
         disabled={isSearching}
-        className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-50 disabled:bg-white/10 disabled:cursor-not-allowed"
+        className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-50 disabled:bg-white/10 disabled:cursor-not-allowed"
       >
-        {isSearching ? 'Searching countries...' : 'Search'}
+        {isSearching ? 'Searching...' : 'Search'}
       </button>
     </div>
   </form>
 );
 
-const SearchProgress = ({ searching }) => (
-  <div className="flex justify-end w-full p-2">
-    {searching.map((country) => (
-      <div key={country} className="flex flex-row items-center gap-2 text-lg font-bold">
-        <span className="capitalize text-gray-100">{country}</span>
-        <span className="loader"></span>
+const SearchProgress = ({ searching }) => {
+  const [visibleCountries, setVisibleCountries] = useState([]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setVisibleCountries(prevVisible => {
+        const newVisible = [...searching].sort(() => 0.5 - Math.random()).slice(0, 3);
+        return newVisible;
+      });
+    }, 1000); // Rotate every 2 seconds
+
+    return () => clearInterval(interval);
+  }, [searching]);
+
+  if (searching.length === 0) return null;
+
+  return (
+    <div className="mt-4">
+      <p>Searching {searching.length} countries...</p>
+      <div className="flex justify-center space-x-4 mt-2">
+        {visibleCountries.map((country) => (
+          <div key={country} className="flex items-center gap-2 text-sm">
+            <span className="capitalize">{country}</span>
+            <span className="loader"></span>
+          </div>
+        ))}
       </div>
-    ))}
-  </div>
-);
+    </div>
+  );
+};
 
 const UserResults = ({ results }) => {
   if (!results) return null;
-
+console.log('results', results);
   if (results.notFound) {
     return (
-      <div className="flex items-center bg-gray-200 rounded-md p-4 space-x-4">
+      <div className="flex items-center bg-gray-200 rounded-md p-4 space-x-4 mt-8">
         <div className="flex-1">
           <h3 className="text-lg font-semibold text-gray-800">{results.name}</h3>
           <p className="text-sm text-red-600">User not found.</p>
@@ -80,10 +99,15 @@ const UserResults = ({ results }) => {
   }
 
   return (
-    <div className="flex items-center bg-gray-50 p-4 rounded-md shadow-md space-x-4 text-black">
+    <div className="flex items-center bg-gray-50 p-4 rounded-xl shadow-md space-x-4 text-black mt-8">
       <div className="w-full space-y-2">
+      <div className='flex justify-end w-full '>
+  <div className='bg-green-500 text-white font-bold w-8 h-8 flex items-center justify-center rounded-full'>
+    {results.index + 1}
+  </div>
+</div>
         <div className="flex items-center gap-4">
-          <img src={results.avatarUrl} alt="Avatar" className="rounded-full w-24 h-24" />
+          <img src={results.avatarUrl} alt="Avatar" className="rounded-full w-24 h-24 bg-gray-300" />
           <div className="grid gap-1">
             <h1 className="text-2xl font-semibold">{results.name}</h1>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -164,6 +188,7 @@ const UserResults = ({ results }) => {
   );
 };
 
+
 const TopGithubContributors = () => {
   const [name, setName] = useState('');
   const [results, setResults] = useState(null);
@@ -174,27 +199,30 @@ const TopGithubContributors = () => {
   const findUser = async (RequiredName) => {
     setIsSearching(true);
     setResults(null);
-    setSearching([]);
+    setSearching(CountriesList);
     setError(null);
 
-    for (const country of CountriesList) {
-      setSearching(prev => [...prev, country]);
-      const searchOneCountryResults = await SearchOneCountry(country, RequiredName);
+    const searchPromises = CountriesList.map(country => 
+      SearchOneCountry(country, RequiredName)
+        .then(result => {
+          if (result) {
+            return { country, result };
+          }
+          throw new Error(`User not found in ${country}`);
+        })
+    );
+
+    try {
+      const { country, result } = await Promise.any(searchPromises);
+      setResults(result);
       setSearching(prev => prev.filter(c => c !== country));
-
-      if (searchOneCountryResults) {
-        setResults(searchOneCountryResults);
-        setIsSearching(false);
-        return;
-      }
-      setError(searchOneCountryResults)
+    } catch (aggregateError) {
+      setResults({ notFound: true, name: RequiredName });
+    } finally {
+      setIsSearching(false);
+      setSearching([]);
     }
-
-    setResults({ notFound: true, name: RequiredName });
-    setIsSearching(false);
   };
-
- 
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -218,4 +246,4 @@ const TopGithubContributors = () => {
   );
 };
 
-export default TopGithubContributors;
+export default TopGithubContributors
