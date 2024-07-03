@@ -16,7 +16,7 @@ export const Footer = () => {
           />
       </div>
       <div>
-        <a href='' target='_blank' className='underline'>
+        <a href='https://x.com/husamahmud/status/1807865697042682212' target='_blank' className='underline'>
         what is this
         </a>
       </div>
